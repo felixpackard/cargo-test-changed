@@ -39,3 +39,9 @@ cargo test-changed --skip-dependents
 # Use a custom test runner
 cargo test-changed --test-runner nextest
 ```
+
+## Limitations
+
+- Currently only supports Git as the version control system
+- Currently only supports `cargo` and `nextest` test runners
+- Does not support running tests in parallel
