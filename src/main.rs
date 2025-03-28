@@ -1,12 +1,16 @@
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use anyhow::{Context, Result};
 use cargo_metadata::{CargoOpt, MetadataCommand};
 use clap::{Parser, ValueEnum};
+use colored::Colorize;
+use error::AppError;
 use gix::bstr::ByteSlice;
 use indexmap::IndexSet;
-use itertools::Itertools;
+
+pub mod error;
+mod format;
 
 #[derive(Debug, Clone, ValueEnum)]
 enum TestRunner {
@@ -48,7 +52,11 @@ impl TestRunner {
             TestRunner::Cargo => {
                 "This shouldn't be possible if you're invoking this binary via cargo.".to_string()
             }
-            TestRunner::Nextest => "Install with 'cargo install cargo-nextest'.".to_string(),
+            TestRunner::Nextest => format!(
+                "to install nextest, run '{}'",
+                "cargo install cargo-nextest".bold().yellow()
+            )
+            .to_string(),
         }
     }
 }
@@ -83,65 +91,93 @@ struct TestChangedArgs {
     dry_run: bool,
 }
 
-/// Main entry point for the cargo subcommand
-fn main() -> Result<()> {
-    // Parse command line options
+fn main() {
+    match run() {
+        Ok(_) => (),
+        Err(err) => {
+            err.report();
+            std::process::exit(err.exit_code());
+        }
+    }
+}
+
+fn run() -> Result<(), AppError> {
     let CargoCli::TestChanged(args) = CargoCli::parse();
 
-    // Get the current workspace root
     let workspace_root = get_workspace_root()?;
-
-    // Retrieve workspace metadata
     let metadata = get_workspace_metadata(&workspace_root)?;
-
-    // Get changed files from Git
     let changed_files = get_changed_files(&workspace_root)?;
-
-    // Find changed crates
     let changed_crates = find_changed_crates(&metadata, &changed_files)?;
+    let dependent_crates = find_dependent_crates(&metadata, &changed_crates)?;
 
-    // Determine crates to test (including dependent crates)
-    let crates_to_test = determine_crates_to_test(&args, &metadata, &changed_crates)?;
-
-    // Run tests for identified crates
-    run_tests(&args, &workspace_root, &crates_to_test)?;
-
-    Ok(())
+    run_tests(&args, &workspace_root, &changed_crates, &dependent_crates)
 }
 
 /// Retrieve the workspace root directory
-fn get_workspace_root() -> Result<PathBuf> {
-    let repo = gix::discover(".")?;
+fn get_workspace_root() -> Result<PathBuf, AppError> {
+    let repo = gix::discover(".").map_err(|e| AppError::GitDiscoveryFailed {
+        reason: e.to_string(),
+    })?;
 
     repo.work_dir()
-        .context("Failed to get repository root")
+        .ok_or_else(|| AppError::GitDiscoveryFailed {
+            reason: "Failed to get repository root".to_string(),
+        })
         .map(|p| p.to_path_buf())
 }
 
 /// Get workspace metadata using cargo metadata
-fn get_workspace_metadata(workspace_root: &Path) -> Result<cargo_metadata::Metadata> {
+fn get_workspace_metadata(workspace_root: &Path) -> Result<cargo_metadata::Metadata, AppError> {
     MetadataCommand::new()
         .manifest_path(workspace_root.join("Cargo.toml"))
         .features(CargoOpt::AllFeatures)
         .no_deps()
         .exec()
-        .context("Failed to retrieve cargo metadata")
+        .map_err(|e| AppError::MetadataFailed {
+            reason: e.to_string(),
+        })
 }
 
 /// Get list of changed files from Git repository
-fn get_changed_files(workspace_root: &Path) -> Result<Vec<PathBuf>> {
-    let repo = gix::discover(workspace_root)?;
+fn get_changed_files(workspace_root: &Path) -> Result<Vec<PathBuf>, AppError> {
+    let repo = gix::discover(workspace_root).map_err(|e| AppError::GitDiscoveryFailed {
+        reason: e.to_string(),
+    })?;
 
     let mut changed_files = IndexSet::new();
 
     let changes = repo
-        .status(gix::features::progress::Discard)?
-        .into_iter(vec![])?;
+        .status(gix::features::progress::Discard)
+        .map_err(|e| AppError::GitOperationFailed {
+            operation: "status".to_string(),
+            reason: e.to_string(),
+        })?
+        .into_iter(vec![])
+        .map_err(|e| AppError::GitOperationFailed {
+            operation: "status iteration".to_string(),
+            reason: e.to_string(),
+        })?;
 
     for change in changes {
-        let change = change?;
+        let change = change.map_err(|e| AppError::GitOperationFailed {
+            operation: "process change".to_string(),
+            reason: e.to_string(),
+        })?;
+
         let path = change.location();
-        changed_files.insert(workspace_root.join(path.to_str()?).canonicalize()?);
+        let path_str = path.to_str().map_err(|_| AppError::GitOperationFailed {
+            operation: "convert path".to_string(),
+            reason: "Invalid UTF-8 in path".to_string(),
+        })?;
+
+        let full_path = workspace_root.join(path_str).canonicalize().map_err(|e| {
+            AppError::GitOperationFailed {
+                operation: "canonicalize path".to_string(),
+                reason: e.to_string(),
+            }
+        })?;
+
+        changed_files.insert(full_path);
     }
 
     Ok(changed_files.into_iter().collect())
@@ -172,69 +208,80 @@ fn find_changed_crates(
 }
 
 /// Determine which crates need testing (including dependencies)
-fn determine_crates_to_test(
-    args: &TestChangedArgs,
+fn find_dependent_crates(
     metadata: &cargo_metadata::Metadata,
     changed_crates: &IndexSet<String>,
 ) -> Result<IndexSet<String>> {
-    let mut crates_to_test = changed_crates.clone();
+    let mut dependent_crates = IndexSet::new();
 
     // Find crates that depend on changed crates
-    if !args.skip_dependents {
-        for package in &metadata.packages {
-            for dep in &package.dependencies {
-                if changed_crates.contains(&dep.name) {
-                    crates_to_test.insert(package.name.clone());
-                }
+    for package in &metadata.packages {
+        for dep in &package.dependencies {
+            if changed_crates.contains(&dep.name) {
+                dependent_crates.insert(package.name.clone());
             }
         }
     }
 
-    Ok(crates_to_test)
+    Ok(dependent_crates)
 }
 
 /// Run tests for specified crates
 fn run_tests(
     args: &TestChangedArgs,
     workspace_root: &Path,
-    crates_to_test: &IndexSet<String>,
-) -> Result<()> {
-    if crates_to_test.is_empty() {
-        println!("No crates to test.");
+    changed_crates: &IndexSet<String>,
+    dependent_crates: &IndexSet<String>,
+) -> Result<(), AppError> {
+    if changed_crates.is_empty() {
+        println!("no crates to test");
         return Ok(());
     }
 
-    println!(
-        "Queueing tests for {} crate{}: {}\n",
-        crates_to_test.len(),
-        if crates_to_test.len() > 1 { "s" } else { "" },
-        crates_to_test.iter().join(", ")
+    print!(
+        "discovered {} changed {}",
+        changed_crates.len(),
+        format::pluralize!("crate", changed_crates.len())
     );
+    if !dependent_crates.is_empty() {
+        print!(
+            "; {} dependent {}",
+            dependent_crates.len(),
+            format::pluralize!("crate", dependent_crates.len())
+        );
+    }
+    println!("\n");
 
     if args.dry_run {
-        println!("Dry run mode enabled. Skipping actual tests.");
+        format::note!("dry run mode enabled, skipping actual tests");
         return Ok(());
     }
 
     if !args.test_runner.is_installed() {
-        return Err(anyhow::anyhow!(
-            "Test runner is not installed. {}",
-            args.test_runner.installation_instructions()
-        ));
+        return Err(AppError::TestRunnerNotInstalled {
+            runner_name: format!("{:?}", args.test_runner),
+            installation_tip: args.test_runner.installation_instructions(),
+        });
     }
 
-    for crate_name in crates_to_test {
-        println!("Running tests for crate: {}", crate_name);
+    for crate_name in changed_crates.iter().chain(dependent_crates.iter()) {
+        println!("running tests for crate: {}", crate_name);
 
         let mut cmd = args.test_runner.command(crate_name);
+        let cmd_string = format!("{:?}", cmd);
 
-        let status = cmd
-            .current_dir(workspace_root)
-            .status()
-            .context("Failed to run tests")?;
+        let status =
+            cmd.current_dir(workspace_root)
+                .status()
+                .map_err(|e| AppError::CommandFailed {
+                    command: cmd_string.clone(),
+                    reason: e.to_string(),
+                })?;
 
         if !status.success() {
-            return Err(anyhow::anyhow!("Tests failed for crate: {}", crate_name));
+            return Err(AppError::TestsFailed {
+                crate_name: crate_name.clone(),
+            });
         }
     }
 
