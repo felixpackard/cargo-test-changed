@@ -1,7 +1,7 @@
 use colored::Colorize;
 use std::fmt;
 
-use crate::format;
+use crate::{format, TestFailure};
 
 #[derive(Debug)]
 pub enum AppError {
@@ -10,7 +10,7 @@ pub enum AppError {
         installation_tip: String,
     },
     TestsFailed {
-        crate_name: String,
+        failures: Vec<TestFailure>,
     },
     GitDiscoveryFailed {
         reason: String,
@@ -36,8 +36,8 @@ impl fmt::Display for AppError {
             AppError::TestRunnerNotInstalled { runner_name, .. } => {
                 write!(f, "test runner '{}' is not installed", runner_name)
             }
-            AppError::TestsFailed { crate_name } => {
-                write!(f, "tests failed for crate: {}", crate_name)
+            AppError::TestsFailed { .. } => {
+                write!(f, "test failed")
             }
             AppError::GitDiscoveryFailed { reason } => {
                 write!(f, "failed to discover git repository: {}", reason)
@@ -82,9 +82,7 @@ impl AppError {
                 )
             }
 
-            AppError::TestsFailed { crate_name } => {
-                format!("tests failed for crate: {}", crate_name.bold().yellow())
-            }
+            AppError::TestsFailed { .. } => "test failed".to_string(),
 
             AppError::GitDiscoveryFailed { reason } => {
                 format!("failed to discover git repository: {}", reason.bold())

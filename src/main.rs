@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::time::Instant;
 
 use cargo_metadata::{CargoOpt, MetadataCommand};
 use clap::{Parser, ValueEnum};
@@ -51,7 +52,7 @@ impl TestRunner {
     fn installation_instructions(&self) -> String {
         match self {
             TestRunner::Cargo => {
-                "This shouldn't be possible if you're invoking this binary via cargo.".to_string()
+                "this shouldn't be possible if you're invoking this binary via cargo.".to_string()
             }
             TestRunner::Nextest => format!(
                 "to install nextest, run '{}'",
@@ -60,6 +61,12 @@ impl TestRunner {
             .to_string(),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct TestFailure {
+    crate_name: String,
+    stdout: String,
 }
 
 /// Configuration for the changed tests subcommand
@@ -94,6 +101,10 @@ struct TestChangedArgs {
     /// Display full output while running tests
     #[arg(long, short)]
     verbose: bool,
+
+    /// Run tests for all crates regardless of failure
+    #[arg(long, short)]
+    no_fail_fast: bool,
 
     /// Additional arguments to pass to the test runner
     #[arg(last = true)]
@@ -281,6 +292,11 @@ fn run_tests(
             .collect()
     };
 
+    let mut passed = 0;
+    let mut failures = Vec::new();
+
+    let start = Instant::now();
+
     for crate_name in crates_to_test {
         print!("test crate {}", crate_name);
 
@@ -293,14 +309,10 @@ fn run_tests(
         std::io::stdout().flush().unwrap();
 
         let mut cmd = args.test_runner.command(crate_name);
-        let mut stderr_capture = None;
-
         cmd.args(args.test_runner_args.iter());
 
-        if !args.verbose {
-            cmd.stdout(Stdio::null());
-            cmd.stderr(Stdio::piped());
-        }
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
 
         let mut child =
             cmd.current_dir(workspace_root)
@@ -310,16 +322,58 @@ fn run_tests(
                     reason: e.to_string(),
                 })?;
 
-        if !args.verbose {
-            if let Some(mut stderr) = child.stderr.take() {
-                let mut buffer = Vec::new();
-                std::io::Read::read_to_end(&mut stderr, &mut buffer).map_err(|e| {
-                    AppError::CommandFailed {
-                        command: format!("{:?}", cmd),
-                        reason: format!("failed to read stderr: {}", e),
+        let mut output_capture = Vec::new();
+
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
+
+        if let (Some(stdout), Some(stderr)) = (stdout, stderr) {
+            let mut merged_output = std::io::BufReader::new(stdout)
+                .bytes()
+                .map(|r| (r, false))
+                .chain(std::io::BufReader::new(stderr).bytes().map(|r| (r, true)));
+
+            if args.verbose {
+                while let Some((byte_result, _is_stderr)) = merged_output.next() {
+                    match byte_result {
+                        Ok(byte) => {
+                            std::io::stdout().write_all(&[byte]).map_err(|e| {
+                                AppError::CommandFailed {
+                                    command: format!("{:?}", cmd),
+                                    reason: format!("failed to write to stdout: {}", e),
+                                }
+                            })?;
+                            std::io::stdout().flush().unwrap();
+                            output_capture.push(byte);
+                        }
+                        Err(e) => {
+                            if e.kind() != std::io::ErrorKind::BrokenPipe {
+                                return Err(AppError::CommandFailed {
+                                    command: format!("{:?}", cmd),
+                                    reason: format!("failed to read output: {}", e),
+                                });
+                            }
+                            break;
+                        }
                     }
-                })?;
-                stderr_capture = Some(buffer);
+                }
+            } else {
+                while let Some((byte_result, _is_stderr)) = merged_output.next() {
+                    match byte_result {
+                        Ok(byte) => {
+                            output_capture.push(byte);
+                        }
+                        Err(e) => {
+                            if e.kind() != std::io::ErrorKind::BrokenPipe {
+                                return Err(AppError::CommandFailed {
+                                    command: format!("{:?}", cmd),
+                                    reason: format!("failed to read output: {}", e),
+                                });
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -328,26 +382,72 @@ fn run_tests(
             reason: e.to_string(),
         })?;
 
-        if !status.success() {
-            println!("{}\n", "FAILED".bold().red());
-
-            if let Some(stderr) = stderr_capture {
-                if !stderr.is_empty() {
-                    println!("test output:\n{}", String::from_utf8_lossy(&stderr));
-                }
+        if status.success() {
+            passed += 1;
+            if args.verbose {
+                println!();
+            } else {
+                println!("{}", "ok".bold().green());
+            }
+        } else {
+            if args.verbose {
+                println!();
+            } else {
+                println!("{}", "FAILED".bold().red());
             }
 
-            return Err(AppError::TestsFailed {
+            failures.push(TestFailure {
                 crate_name: crate_name.clone(),
+                stdout: String::from_utf8_lossy(&output_capture).into_owned(),
             });
-        }
 
-        if args.verbose {
-            println!();
-        } else {
-            println!("{}", "ok".bold().green());
+            if !args.no_fail_fast {
+                if args.verbose {
+                    println!();
+                }
+                break;
+            }
         }
     }
 
-    Ok(())
+    if !args.verbose {
+        println!();
+    }
+
+    let end = Instant::now();
+
+    if !failures.is_empty() {
+        if !args.verbose {
+            println!("\ncrate failures:\n");
+            for failure in failures.iter() {
+                println!(
+                    "---- {} output ----\n{}\n",
+                    failure.crate_name, failure.stdout
+                );
+            }
+        }
+        println!("crate failures:");
+        for failure in failures.iter() {
+            println!("    {}", failure.crate_name);
+        }
+        println!();
+    }
+
+    println!(
+        "test result: {}. {} passed; {} failed; finished in {:.2}s\n",
+        if failures.is_empty() {
+            "ok".bold().green()
+        } else {
+            "FAILED".bold().red()
+        },
+        passed,
+        failures.len(),
+        end.duration_since(start).as_secs_f64()
+    );
+
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::TestsFailed { failures })
+    }
 }

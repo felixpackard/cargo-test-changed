@@ -23,10 +23,12 @@ cargo test-changed
 ```
 
 Options:
-- `--test-runner`: Specify a custom test runner
-- `--skip-dependents`: Skip dependent crates, only test crates with changes
-- `--dry-run`: Skip running tests, only print the crates that would be tested
-- `--verbose`: Display full output while running tests
+- `-t`, `--test-runner`: Specify a custom test runner
+- `-s`, `--skip-dependents`: Skip dependent crates, only test crates with changes
+- `-d`, `--dry-run`: Skip running tests, only print the crates that would be tested
+- `-v`, `--verbose`: Display full output while running tests
+- `-n`, `--no-fail-fast`: Run tests for all crates regardless of failure
+- `-- <TEST_RUNNER_ARGS>...`: Additional arguments to pass to the test runner
 
 Examples:
 ```bash
