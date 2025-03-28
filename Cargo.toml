@@ -12,7 +12,6 @@ clap-cargo = "0.15.2"
 colored = "3.0.0"
 gix = { version = "0.70", features = ["status"] }
 indexmap = "2.8.0"
-itertools = "0.14.0"
 serde = { version = "1.0", features = ["derive"] }
 
 [[bin]]
