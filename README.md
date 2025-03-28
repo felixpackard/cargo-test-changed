@@ -24,7 +24,7 @@ cargo test-changed
 ```
 
 Options:
-- `--test-runner` or `-t`: Specify a custom test runner (default is `cargo test`)
+- `--test-runner`: Specify a custom test runner (default is `cargo test`)
 - `--skip-dependents`: Skip testing dependent crates
 - `--dry-run`: Skip running tests, only print the crates that would be tested
 
