@@ -24,19 +24,12 @@ impl TestRunner {
         match self {
             TestRunner::Cargo => {
                 let mut cmd = Command::new("cargo");
-                cmd.args(vec!["test", "-p", crate_name]);
+                cmd.args(["test", "-p", crate_name]);
                 cmd
             }
             TestRunner::Nextest => {
                 let mut cmd = Command::new("cargo");
-                cmd.args(vec![
-                    "nextest",
-                    "run",
-                    "--no-tests",
-                    "pass",
-                    "-p",
-                    crate_name,
-                ]);
+                cmd.args(["nextest", "run", "--no-tests", "pass", "-p", crate_name]);
                 cmd
             }
         }
@@ -164,7 +157,7 @@ fn get_changed_files(workspace_root: &Path) -> Result<Vec<PathBuf>, AppError> {
             operation: "status".to_string(),
             reason: e.to_string(),
         })?
-        .into_iter(vec![])
+        .into_iter([])
         .map_err(|e| AppError::GitOperationFailed {
             operation: "status iteration".to_string(),
             reason: e.to_string(),
