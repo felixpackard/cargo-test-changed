@@ -1,8 +1,17 @@
 [package]
+description = "A cargo subcommand to run tests for changed crates and their dependents."
 name = "cargo-test-changed"
 version = "0.1.0"
 edition = "2021"
-description = "A Cargo subcommand to run tests for changed crates and their dependents"
+license = "GPL-3.0-or-later"
+authors = ["Felix Packard <fjpackard@gmail.com>"]
+repository = "https://github.com/felixpackard/cargo-test-changed"
+keywords = ["cargo", "subcommand", "test", "git"]
+categories = [
+    "command-line-utilities",
+    "development-tools::cargo-plugins",
+    "development-tools::testing",
+]
 
 [dependencies]
 anyhow = "1.0"
