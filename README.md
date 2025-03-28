@@ -1,6 +1,6 @@
 # cargo-test-changed
 
-A Cargo subcommand that runs tests only for crates that have been modified in the current workspace.
+A Cargo subcommand to run tests for changed crates and their dependents.
 
 ## Features
 
@@ -8,7 +8,6 @@ A Cargo subcommand that runs tests only for crates that have been modified in th
 - Identify affected crates based on changed files
 - Run tests for changed crates and their dependents
 - Configurable test runner
-- Support for Cargo workspaces
 
 ## Installation
 
