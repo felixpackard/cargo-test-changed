@@ -29,7 +29,14 @@ impl TestRunner {
             }
             TestRunner::Nextest => {
                 let mut cmd = Command::new("cargo");
-                cmd.args(vec!["nextest", "run", "-p", crate_name]);
+                cmd.args(vec![
+                    "nextest",
+                    "run",
+                    "--no-tests",
+                    "pass",
+                    "-p",
+                    crate_name,
+                ]);
                 cmd
             }
         }
@@ -336,7 +343,11 @@ fn run_tests(
             });
         }
 
-        println!("{}", "ok".bold().green());
+        if args.verbose {
+            println!();
+        } else {
+            println!("{}", "ok".bold().green());
+        }
     }
 
     Ok(())
