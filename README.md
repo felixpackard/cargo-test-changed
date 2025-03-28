@@ -24,9 +24,10 @@ cargo test-changed
 ```
 
 Options:
-- `--test-runner`: Specify a custom test runner (default is `cargo test`)
-- `--skip-dependents`: Skip testing dependent crates
+- `--test-runner`: Specify a custom test runner
+- `--skip-dependents`: Skip dependent crates, only test crates with changes
 - `--dry-run`: Skip running tests, only print the crates that would be tested
+- `--verbose`: Display full output while running tests
 
 Examples:
 ```bash

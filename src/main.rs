@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use cargo_metadata::{CargoOpt, MetadataCommand};
 use clap::{Parser, ValueEnum};
@@ -78,17 +79,21 @@ enum CargoCli {
     about = "Run tests only for crates that have been modified in the current workspace"
 )]
 struct TestChangedArgs {
-    /// Specify a custom test runner (default is cargo test)
+    /// Specify a custom test runner
     #[arg(long, short, default_value = "cargo")]
     test_runner: TestRunner,
 
-    /// Skip testing dependent crates
+    /// Skip dependent crates, only test crates with changes
     #[arg(long, short)]
     skip_dependents: bool,
 
     /// Skip running tests, only print the crates that would be tested
     #[arg(long, short)]
     dry_run: bool,
+
+    /// Display full output while running tests
+    #[arg(long, short)]
+    verbose: bool,
 }
 
 fn main() {
@@ -238,19 +243,18 @@ fn run_tests(
         return Ok(());
     }
 
-    print!(
-        "discovered {} changed {}",
+    println!(
+        "discovered {} changed {}; {}{} dependent {}\n",
         changed_crates.len(),
-        format::pluralize!("crate", changed_crates.len())
+        format::pluralize!("crate", changed_crates.len()),
+        if args.skip_dependents {
+            "skipping "
+        } else {
+            ""
+        },
+        dependent_crates.len(),
+        format::pluralize!("crate", dependent_crates.len())
     );
-    if !dependent_crates.is_empty() {
-        print!(
-            "; {} dependent {}",
-            dependent_crates.len(),
-            format::pluralize!("crate", dependent_crates.len())
-        );
-    }
-    println!("\n");
 
     if args.dry_run {
         format::note!("dry run mode enabled, skipping actual tests");
@@ -264,25 +268,75 @@ fn run_tests(
         });
     }
 
-    for crate_name in changed_crates.iter().chain(dependent_crates.iter()) {
-        println!("running tests for crate: {}", crate_name);
+    let crates_to_test: Vec<&String> = if args.skip_dependents {
+        changed_crates.iter().collect()
+    } else {
+        changed_crates
+            .iter()
+            .chain(dependent_crates.iter())
+            .collect()
+    };
+
+    for crate_name in crates_to_test {
+        print!("test crate {}", crate_name);
+
+        if args.verbose {
+            println!();
+        } else {
+            print!(" ... ");
+        }
+
+        std::io::stdout().flush().unwrap();
 
         let mut cmd = args.test_runner.command(crate_name);
-        let cmd_string = format!("{:?}", cmd);
+        let mut stderr_capture = None;
 
-        let status =
+        if !args.verbose {
+            cmd.stdout(Stdio::null());
+            cmd.stderr(Stdio::piped());
+        }
+
+        let mut child =
             cmd.current_dir(workspace_root)
-                .status()
+                .spawn()
                 .map_err(|e| AppError::CommandFailed {
-                    command: cmd_string.clone(),
+                    command: format!("{:?}", cmd),
                     reason: e.to_string(),
                 })?;
 
+        if !args.verbose {
+            if let Some(mut stderr) = child.stderr.take() {
+                let mut buffer = Vec::new();
+                std::io::Read::read_to_end(&mut stderr, &mut buffer).map_err(|e| {
+                    AppError::CommandFailed {
+                        command: format!("{:?}", cmd),
+                        reason: format!("failed to read stderr: {}", e),
+                    }
+                })?;
+                stderr_capture = Some(buffer);
+            }
+        }
+
+        let status = child.wait().map_err(|e| AppError::CommandFailed {
+            command: format!("{:?}", cmd),
+            reason: e.to_string(),
+        })?;
+
         if !status.success() {
+            println!("{}\n", "FAILED".bold().red());
+
+            if let Some(stderr) = stderr_capture {
+                if !stderr.is_empty() {
+                    println!("test output:\n{}", String::from_utf8_lossy(&stderr));
+                }
+            }
+
             return Err(AppError::TestsFailed {
                 crate_name: crate_name.clone(),
             });
         }
+
+        println!("{}", "ok".bold().green());
     }
 
     Ok(())
