@@ -6,8 +6,9 @@ description = "A Cargo subcommand to run tests for changed crates and their depe
 
 [dependencies]
 anyhow = "1.0"
-cargo_metadata = "0.15"
+cargo_metadata = "0.19"
 clap = { version = "4.5.34", features = ["derive"] }
+clap-cargo = "0.15.2"
 gix = { version = "0.70", features = ["status"] }
 indexmap = "2.8.0"
 itertools = "0.14.0"

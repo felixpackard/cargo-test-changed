@@ -3,35 +3,90 @@ use std::process::Command;
 
 use anyhow::{Context, Result};
 use cargo_metadata::{CargoOpt, MetadataCommand};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use gix::bstr::ByteSlice;
 use indexmap::IndexSet;
 use itertools::Itertools;
 
+#[derive(Debug, Clone, ValueEnum)]
+enum TestRunner {
+    Cargo,
+    Nextest,
+}
+
+impl TestRunner {
+    fn command(&self, crate_name: &str) -> Command {
+        match self {
+            TestRunner::Cargo => {
+                let mut cmd = Command::new("cargo");
+                cmd.args(vec!["test", "-p", crate_name]);
+                cmd
+            }
+            TestRunner::Nextest => {
+                let mut cmd = Command::new("cargo");
+                cmd.args(vec!["nextest", "run", "-p", crate_name]);
+                cmd
+            }
+        }
+    }
+
+    fn is_installed(&self) -> bool {
+        match self {
+            TestRunner::Cargo => true,
+            TestRunner::Nextest => std::process::Command::new("cargo")
+                .args(["nextest", "--version"])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|status| status.success())
+                .unwrap_or(false),
+        }
+    }
+
+    fn installation_instructions(&self) -> String {
+        match self {
+            TestRunner::Cargo => {
+                "This shouldn't be possible if you're invoking this binary via cargo.".to_string()
+            }
+            TestRunner::Nextest => "Install with 'cargo install cargo-nextest'.".to_string(),
+        }
+    }
+}
+
 /// Configuration for the changed tests subcommand
-#[derive(Debug, Parser)]
+#[derive(Parser)]
 #[command(
-    name = "cargo-changed-tests",
-    about = "A Cargo subcommand to run tests for changed crates and their dependents"
+    name = "cargo",
+    bin_name = "cargo",
+    styles = clap_cargo::style::CLAP_STYLING,
 )]
-struct Opt {
+enum CargoCli {
+    TestChanged(TestChangedArgs),
+}
+
+#[derive(clap::Args)]
+#[command(
+    version,
+    about = "Run tests only for crates that have been modified in the current workspace"
+)]
+struct TestChangedArgs {
     /// Specify a custom test runner (default is cargo test)
-    #[arg(long, short)]
-    test_runner: Option<String>,
+    #[arg(long, short, default_value = "cargo")]
+    test_runner: TestRunner,
 
     /// Skip testing dependent crates
-    #[arg(long)]
+    #[arg(long, short)]
     skip_dependents: bool,
 
     /// Skip running tests, only print the crates that would be tested
-    #[arg(long)]
+    #[arg(long, short)]
     dry_run: bool,
 }
 
 /// Main entry point for the cargo subcommand
 fn main() -> Result<()> {
     // Parse command line options
-    let opt = Opt::parse();
+    let CargoCli::TestChanged(args) = CargoCli::parse();
 
     // Get the current workspace root
     let workspace_root = get_workspace_root()?;
@@ -46,10 +101,10 @@ fn main() -> Result<()> {
     let changed_crates = find_changed_crates(&metadata, &changed_files)?;
 
     // Determine crates to test (including dependent crates)
-    let crates_to_test = determine_crates_to_test(&opt, &metadata, &changed_crates)?;
+    let crates_to_test = determine_crates_to_test(&args, &metadata, &changed_crates)?;
 
     // Run tests for identified crates
-    run_tests(&opt, &workspace_root, &crates_to_test)?;
+    run_tests(&args, &workspace_root, &crates_to_test)?;
 
     Ok(())
 }
@@ -118,14 +173,14 @@ fn find_changed_crates(
 
 /// Determine which crates need testing (including dependencies)
 fn determine_crates_to_test(
-    opt: &Opt,
+    args: &TestChangedArgs,
     metadata: &cargo_metadata::Metadata,
     changed_crates: &IndexSet<String>,
 ) -> Result<IndexSet<String>> {
     let mut crates_to_test = changed_crates.clone();
 
     // Find crates that depend on changed crates
-    if !opt.skip_dependents {
+    if !args.skip_dependents {
         for package in &metadata.packages {
             for dep in &package.dependencies {
                 if changed_crates.contains(&dep.name) {
@@ -139,7 +194,11 @@ fn determine_crates_to_test(
 }
 
 /// Run tests for specified crates
-fn run_tests(opt: &Opt, workspace_root: &Path, crates_to_test: &IndexSet<String>) -> Result<()> {
+fn run_tests(
+    args: &TestChangedArgs,
+    workspace_root: &Path,
+    crates_to_test: &IndexSet<String>,
+) -> Result<()> {
     if crates_to_test.is_empty() {
         println!("No crates to test.");
         return Ok(());
@@ -152,22 +211,22 @@ fn run_tests(opt: &Opt, workspace_root: &Path, crates_to_test: &IndexSet<String>
         crates_to_test.iter().join(", ")
     );
 
-    if opt.dry_run {
+    if args.dry_run {
         println!("Dry run mode enabled. Skipping actual tests.");
         return Ok(());
     }
 
-    // Default to cargo test if no custom runner specified
-    let test_runner = opt.test_runner.as_deref().unwrap_or("cargo");
+    if !args.test_runner.is_installed() {
+        return Err(anyhow::anyhow!(
+            "Test runner is not installed. {}",
+            args.test_runner.installation_instructions()
+        ));
+    }
 
     for crate_name in crates_to_test {
         println!("Running tests for crate: {}", crate_name);
 
-        let mut cmd = Command::new(test_runner);
-
-        if test_runner == "cargo" {
-            cmd.arg("test").arg("-p").arg(crate_name);
-        }
+        let mut cmd = args.test_runner.command(crate_name);
 
         let status = cmd
             .current_dir(workspace_root)
