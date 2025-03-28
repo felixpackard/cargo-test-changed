@@ -38,6 +38,9 @@ cargo test-changed --skip-dependents
 
 # Use a custom test runner
 cargo test-changed --test-runner nextest
+
+# Pass additional arguments to the test runner
+cargo test-changed -- --release
 ```
 
 ## Limitations

@@ -94,6 +94,10 @@ struct TestChangedArgs {
     /// Display full output while running tests
     #[arg(long, short)]
     verbose: bool,
+
+    /// Additional arguments to pass to the test runner
+    #[arg(last = true)]
+    test_runner_args: Vec<String>,
 }
 
 fn main() {
@@ -290,6 +294,8 @@ fn run_tests(
 
         let mut cmd = args.test_runner.command(crate_name);
         let mut stderr_capture = None;
+
+        cmd.args(args.test_runner_args.iter());
 
         if !args.verbose {
             cmd.stdout(Stdio::null());
