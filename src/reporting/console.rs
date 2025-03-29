@@ -1,4 +1,7 @@
-use crate::testing::result::TestResult;
+use crate::testing::{
+    plan::{DiscoveryType, TestCrates, TestPlan},
+    result::TestResult,
+};
 
 use super::{pluralize, Reporter};
 use colored::Colorize;
@@ -80,20 +83,38 @@ impl<W: Write> Reporter for ConsoleReporter<W> {
         .unwrap();
     }
 
-    fn plan_summary(&mut self, direct_count: usize, dependent_count: usize, skip_dependents: bool) {
-        let direct_word = pluralize(direct_count, "crate", "crates");
-        let dependent_word = pluralize(dependent_count, "crate", "crates");
+    fn plan_summary(&mut self, test_plan: &TestPlan) {
+        match &test_plan.crates {
+            TestCrates::Manual(crates) => {
+                let word = pluralize(crates.len(), "crate", "crates");
+                writeln!(self.writer, "manually testing {} {}\n", crates.len(), word).unwrap();
+            }
+            TestCrates::Discovered(crates) => {
+                let (modified, dependent) = crates.iter().partition::<Vec<_>, _>(|c| {
+                    matches!(c.discovery_type, DiscoveryType::Modified)
+                });
 
-        writeln!(
-            self.writer,
-            "discovered {} changed {}; {}{} dependent {}\n",
-            direct_count,
-            direct_word,
-            if skip_dependents { "skipping " } else { "" },
-            dependent_count,
-            dependent_word
-        )
-        .unwrap();
+                let (modified_count, dependent_count) = (modified.len(), dependent.len());
+
+                let modified_word = pluralize(modified_count, "crate", "crates");
+                let dependent_word = pluralize(dependent_count, "crate", "crates");
+
+                writeln!(
+                    self.writer,
+                    "discovered {} changed {}; {}{} dependent {}\n",
+                    modified_count,
+                    modified_word,
+                    if test_plan.skip_dependents {
+                        "skipping "
+                    } else {
+                        ""
+                    },
+                    dependent_count,
+                    dependent_word
+                )
+                .unwrap();
+            }
+        }
     }
 
     fn test_failures(&mut self, failures: &Vec<TestResult>) {
@@ -108,7 +129,12 @@ impl<W: Write> Reporter for ConsoleReporter<W> {
     }
 
     fn test_failure_details(&mut self, crate_name: &str, output: &str) {
-        writeln!(self.writer, "---- {} output ----\n{}\n", crate_name, output).unwrap();
+        writeln!(
+            self.writer,
+            "---- 📦 {} output ----\n{}\n",
+            crate_name, output
+        )
+        .unwrap();
     }
 
     fn no_tests(&mut self) {

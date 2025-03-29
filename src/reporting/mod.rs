@@ -1,4 +1,4 @@
-use crate::testing::result::TestResult;
+use crate::testing::{plan::TestPlan, result::TestResult};
 
 pub mod console;
 pub mod json;
@@ -24,7 +24,7 @@ pub trait Reporter {
     fn test_summary(&mut self, passed: usize, failed: usize, duration_secs: f64);
 
     /// Report a test plan summary
-    fn plan_summary(&mut self, direct_count: usize, dependent_count: usize, skip_dependents: bool);
+    fn plan_summary(&mut self, test_plan: &TestPlan);
 
     /// Report all test failures
     fn test_failures(&mut self, failures: &Vec<TestResult>);

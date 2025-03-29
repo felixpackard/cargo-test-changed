@@ -1,6 +1,7 @@
 use std::io::{stderr, stdout};
 
 use anyhow::Result;
+use indexmap::IndexSet;
 use test_runner::TestRunnerType;
 
 use clap::Parser;
@@ -14,6 +15,7 @@ mod testing;
 mod vcs;
 
 use reporting::Reporter;
+use testing::plan::{DiscoveredTestCrate, DiscoveryType, ManualTestCrate, TestCrates, TestPlan};
 use vcs::VcsType;
 
 /// Configuration for the changed tests subcommand
@@ -53,6 +55,10 @@ struct TestChangedArgs {
     #[arg(long, short)]
     no_fail_fast: bool,
 
+    /// Specify a set of crates to run tests for, typically for re-running failed tests
+    #[arg(long, short, value_delimiter = ',')]
+    crates: Vec<String>,
+
     /// Output in JSON format for machine consumption
     #[arg(long, short)]
     json: bool,
@@ -83,8 +89,37 @@ fn run() -> Result<(), AppError> {
     let metadata = metadata::get_workspace_metadata(&workspace_root)?;
 
     // Identify which crates need testing
-    let changed_crates = metadata::find_changed_crates(&metadata, &changed_files)?;
-    let dependent_crates = metadata::find_dependent_crates(&metadata, &changed_crates)?;
+    let crates = if args.crates.is_empty() {
+        let mut crates = IndexSet::new();
+        let changed_crates = metadata::find_changed_crates(&metadata, &changed_files)?;
+
+        crates.extend(
+            changed_crates
+                .iter()
+                .map(|name| DiscoveredTestCrate {
+                    name: name.clone(),
+                    discovery_type: DiscoveryType::Modified,
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        crates.extend(
+            metadata::find_dependent_crates(&metadata, &changed_crates)?
+                .into_iter()
+                .map(|name| DiscoveredTestCrate {
+                    name,
+                    discovery_type: DiscoveryType::Dependent,
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        TestCrates::Discovered(crates)
+    } else {
+        metadata::verify_crates_exist(&metadata, args.crates.as_slice())?;
+        TestCrates::Manual(IndexSet::from_iter(
+            args.crates.into_iter().map(|name| ManualTestCrate { name }),
+        ))
+    };
 
     // Get the appropriate test runner
     let runner = args.test_runner.create();
@@ -100,16 +135,22 @@ fn run() -> Result<(), AppError> {
     };
 
     // Execute the tests
-    testing::run_tests(
-        &workspace_root,
-        runner.as_ref(),
-        &changed_crates,
-        &dependent_crates,
-        args.skip_dependents,
-        !args.no_fail_fast,
-        args.verbose,
-        args.test_runner_args,
-        args.dry_run,
-        reporter.as_mut(),
-    )
+    let test_plan = TestPlan {
+        workspace_root,
+        crates,
+        skip_dependents: args.skip_dependents,
+        fail_fast: !args.no_fail_fast,
+        verbose: args.verbose,
+        test_runner_args: args.test_runner_args,
+    };
+
+    testing::run_tests(test_plan, runner.as_ref(), args.dry_run, reporter.as_mut())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_run_tests() {
+        assert_eq!(1 + 1, 3);
+    }
 }

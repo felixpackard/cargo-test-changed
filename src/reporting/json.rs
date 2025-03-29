@@ -1,4 +1,7 @@
-use crate::testing::result::TestResult;
+use crate::testing::{
+    plan::{DiscoveryType, TestCrates, TestPlan},
+    result::TestResult,
+};
 
 use super::Reporter;
 use serde::Serialize;
@@ -74,15 +77,35 @@ impl<W: Write> Reporter for JsonReporter<W> {
         );
     }
 
-    fn plan_summary(&mut self, direct_count: usize, dependent_count: usize, skip_dependents: bool) {
-        self.emit_event(
-            "plan_summary",
-            serde_json::json!({
-                "direct_count": direct_count,
-                "dependent_count": dependent_count,
-                "skip_dependents": skip_dependents,
-            }),
-        );
+    fn plan_summary(&mut self, test_plan: &TestPlan) {
+        match &test_plan.crates {
+            TestCrates::Manual(crates) => {
+                self.emit_event(
+                    "plan_summary",
+                    serde_json::json!({
+                        "run_type": "manual",
+                        "crate_count": crates.len(),
+                    }),
+                );
+            }
+            TestCrates::Discovered(crates) => {
+                let (modified, dependent) = crates.iter().partition::<Vec<_>, _>(|c| {
+                    matches!(c.discovery_type, DiscoveryType::Modified)
+                });
+
+                let (modified_count, dependent_count) = (modified.len(), dependent.len());
+
+                self.emit_event(
+                    "plan_summary",
+                    serde_json::json!({
+                        "run_type": "discovered",
+                        "modified_count": modified_count,
+                        "dependent_count": dependent_count,
+                        "skip_dependents": test_plan.skip_dependents,
+                    }),
+                );
+            }
+        }
     }
 
     fn test_failures(&mut self, failures: &Vec<TestResult>) {

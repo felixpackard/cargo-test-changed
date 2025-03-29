@@ -9,7 +9,9 @@ pub enum AppError {
         runner_name: String,
         installation_tip: String,
     },
-    TestsFailed,
+    TestsFailed {
+        failed_crates: Vec<String>,
+    },
     GitDiscoveryFailed {
         reason: String,
     },
@@ -23,6 +25,9 @@ pub enum AppError {
     CommandFailed {
         command: String,
         reason: String,
+    },
+    UnknownCrate {
+        crate_name: String,
     },
     Other(anyhow::Error),
 }
@@ -48,6 +53,9 @@ impl fmt::Display for AppError {
             AppError::CommandFailed { command, reason } => {
                 write!(f, "command '{}' failed: {}", command, reason)
             }
+            AppError::UnknownCrate { crate_name } => {
+                write!(f, "unknown crate '{}'", crate_name)
+            }
             AppError::Other(err) => {
                 write!(f, "{}", err)
             }
@@ -65,6 +73,7 @@ impl AppError {
             AppError::MetadataFailed { .. } => 40,
             AppError::GitOperationFailed { .. } => 50,
             AppError::CommandFailed { .. } => 60,
+            AppError::UnknownCrate { .. } => 70,
             AppError::Other(_) => 1,
         }
     }
@@ -79,8 +88,12 @@ impl AppError {
                 reporter.error(&format!("test runner '{}' is not installed", runner_name));
                 reporter.tip(installation_tip);
             }
-            AppError::TestsFailed { .. } => {
-                reporter.error("test failed");
+            AppError::TestsFailed { failed_crates } => {
+                let rerun_command = format!("-c {}", failed_crates.join(","));
+                reporter.error(&format!(
+                    "test failed, to rerun pass `{}`",
+                    rerun_command.bold().yellow(),
+                ));
             }
             AppError::GitDiscoveryFailed { reason } => {
                 reporter.error(&format!(
@@ -107,6 +120,9 @@ impl AppError {
                     command.bold().yellow(),
                     reason.bold()
                 ));
+            }
+            AppError::UnknownCrate { crate_name } => {
+                reporter.error(&format!("unknown crate '{}'", crate_name.bold().yellow()));
             }
             AppError::Other(err) => {
                 reporter.error(&format!("{}", err));

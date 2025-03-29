@@ -3,14 +3,14 @@ use std::io::{Read, Write};
 use std::process::Stdio;
 use std::time::Instant;
 
-use super::plan::{TestCrate, TestPlan};
+use super::plan::TestPlan;
 use super::result::{TestResult, TestResults};
 use crate::error::AppError;
 use crate::reporting::Reporter;
 use crate::test_runner::TestRunner;
 
 pub struct TestExecutor<'a> {
-    plan: &'a TestPlan,
+    test_plan: &'a TestPlan,
     runner: &'a dyn TestRunner,
     reporter: &'a mut dyn Reporter,
 }
@@ -22,7 +22,7 @@ impl<'a> TestExecutor<'a> {
         reporter: &'a mut dyn Reporter,
     ) -> Self {
         TestExecutor {
-            plan,
+            test_plan: plan,
             runner,
             reporter,
         }
@@ -39,11 +39,11 @@ impl<'a> TestExecutor<'a> {
             });
         }
 
-        let crates_to_test = &self.plan.get_crates_to_test();
+        let crates_to_test = &self.test_plan.get_crates_to_test();
         for (index, test_crate) in crates_to_test.iter().enumerate() {
             let result = self.execute_single_test(test_crate, index + 1, crates_to_test.len())?;
 
-            let should_stop = !result.success && self.plan.fail_fast;
+            let should_stop = !result.success && self.test_plan.fail_fast;
             results.add_result(result);
 
             if should_stop {
@@ -57,24 +57,24 @@ impl<'a> TestExecutor<'a> {
 
     fn execute_single_test(
         &mut self,
-        test_crate: &TestCrate,
+        crate_name: &str,
         test_number: usize,
         total_tests: usize,
     ) -> Result<TestResult, AppError> {
         self.reporter
-            .test_start(&test_crate.name, test_number, total_tests);
+            .test_start(crate_name, test_number, total_tests);
 
         std::io::stdout().flush().unwrap();
 
         let crate_start = Instant::now();
-        let mut cmd = self.runner.command(&test_crate.name);
-        cmd.args(&self.plan.runner_args);
+        let mut cmd = self.runner.command(crate_name);
+        cmd.args(&self.test_plan.test_runner_args);
 
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
         let mut child = cmd
-            .current_dir(&self.plan.workspace_root)
+            .current_dir(&self.test_plan.workspace_root)
             .spawn()
             .map_err(|e| AppError::CommandFailed {
                 command: format!("{:?}", cmd),
@@ -92,7 +92,7 @@ impl<'a> TestExecutor<'a> {
                 .map(|r| (r, false))
                 .chain(std::io::BufReader::new(stderr).bytes().map(|r| (r, true)));
 
-            if self.plan.verbose {
+            if self.test_plan.verbose {
                 while let Some((byte_result, _is_stderr)) = merged_output.next() {
                     match byte_result {
                         Ok(byte) => {
@@ -145,10 +145,10 @@ impl<'a> TestExecutor<'a> {
         let duration = crate_start.elapsed();
 
         self.reporter
-            .test_result(&test_crate.name, success, duration.as_millis() as u64);
+            .test_result(crate_name, success, duration.as_millis() as u64);
 
         Ok(TestResult {
-            crate_name: test_crate.name.clone(),
+            crate_name: crate_name.to_string(),
             success,
             output: String::from_utf8_lossy(&output_capture).into_owned(),
         })

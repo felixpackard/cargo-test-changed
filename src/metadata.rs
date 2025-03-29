@@ -60,3 +60,19 @@ pub fn find_dependent_crates(
 
     Ok(dependent_crates)
 }
+
+/// Verify that all specified crates exist in the workspace
+pub fn verify_crates_exist(
+    metadata: &cargo_metadata::Metadata,
+    crates: &[String],
+) -> Result<(), AppError> {
+    for crate_name in crates {
+        if !metadata.packages.iter().any(|p| p.name == *crate_name) {
+            return Err(AppError::UnknownCrate {
+                crate_name: crate_name.clone(),
+            });
+        }
+    }
+
+    Ok(())
+}
