@@ -7,13 +7,14 @@ use clap::Parser;
 use error::AppError;
 
 mod error;
-mod git;
 mod metadata;
 mod reporting;
 mod test_runner;
 mod testing;
+mod vcs;
 
 use reporting::Reporter;
+use vcs::VcsType;
 
 /// Configuration for the changed tests subcommand
 #[derive(Parser)]
@@ -76,8 +77,9 @@ fn run() -> Result<(), AppError> {
     let CargoCli::TestChanged(args) = CargoCli::parse();
 
     // Get workspace and repository information
-    let workspace_root = git::get_workspace_root()?;
-    let changed_files = git::get_changed_files(&workspace_root)?;
+    let vcs = VcsType::Git.create();
+    let workspace_root = vcs.get_workspace_root()?;
+    let changed_files = vcs.get_changed_files(&workspace_root)?;
     let metadata = metadata::get_workspace_metadata(&workspace_root)?;
 
     // Identify which crates need testing
