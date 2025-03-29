@@ -15,7 +15,7 @@ pub trait Reporter {
     fn error(&mut self, message: &str);
 
     /// Report the test start
-    fn test_start(&mut self, crate_name: &str);
+    fn test_start(&mut self, crate_name: &str, test_number: usize, total_tests: usize);
 
     /// Report a test result (success or failure)
     fn test_result(&mut self, crate_name: &str, success: bool, duration_ms: u64);

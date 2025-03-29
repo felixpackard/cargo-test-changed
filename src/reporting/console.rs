@@ -28,11 +28,13 @@ impl<W: Write> Reporter for ConsoleReporter<W> {
         writeln!(self.writer, "{}: {}", "error".bold().red(), message).unwrap();
     }
 
-    fn test_start(&mut self, crate_name: &str) {
+    fn test_start(&mut self, crate_name: &str, test_number: usize, total_tests: usize) {
         write!(
             self.writer,
-            "{}test crate {}",
+            "{}({}/{}) test crate {}",
             if self.verbose { "📦 " } else { "" },
+            test_number,
+            total_tests,
             crate_name
         )
         .unwrap();

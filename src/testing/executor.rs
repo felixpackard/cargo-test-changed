@@ -39,8 +39,9 @@ impl<'a> TestExecutor<'a> {
             });
         }
 
-        for test_crate in &self.plan.get_crates_to_test() {
-            let result = self.execute_single_test(test_crate)?;
+        let crates_to_test = &self.plan.get_crates_to_test();
+        for (index, test_crate) in crates_to_test.iter().enumerate() {
+            let result = self.execute_single_test(test_crate, index + 1, crates_to_test.len())?;
 
             let should_stop = !result.success && self.plan.fail_fast;
             results.add_result(result);
@@ -54,8 +55,14 @@ impl<'a> TestExecutor<'a> {
         Ok(results)
     }
 
-    fn execute_single_test(&mut self, test_crate: &TestCrate) -> Result<TestResult, AppError> {
-        self.reporter.test_start(&test_crate.name);
+    fn execute_single_test(
+        &mut self,
+        test_crate: &TestCrate,
+        test_number: usize,
+        total_tests: usize,
+    ) -> Result<TestResult, AppError> {
+        self.reporter
+            .test_start(&test_crate.name, test_number, total_tests);
 
         std::io::stdout().flush().unwrap();
 

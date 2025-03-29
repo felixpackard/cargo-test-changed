@@ -48,8 +48,8 @@ impl<W: Write> Reporter for JsonReporter<W> {
         self.emit_event("error", serde_json::json!({ "message": message }));
     }
 
-    fn test_start(&mut self, crate_name: &str) {
-        self.emit_event("test_start", serde_json::json!({ "crate": crate_name }));
+    fn test_start(&mut self, crate_name: &str, test_number: usize, total_tests: usize) {
+        self.emit_event("test_start", serde_json::json!({ "crate": crate_name, "test_number": test_number, "total_tests": total_tests }));
     }
 
     fn test_result(&mut self, crate_name: &str, success: bool, duration_ms: u64) {
