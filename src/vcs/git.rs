@@ -1,4 +1,4 @@
-use gix::bstr::ByteSlice;
+use gix::{bstr::ByteSlice, status::index_worktree::iter::Summary};
 use indexmap::IndexSet;
 
 use crate::error::AppError;
@@ -36,7 +36,8 @@ impl Vcs for GitVcs {
                 operation: "status".to_string(),
                 reason: e.to_string(),
             })?
-            .into_iter([])
+            .untracked_files(gix::status::UntrackedFiles::Files)
+            .into_iter(None)
             .map_err(|e| AppError::GitOperationFailed {
                 operation: "status iteration".to_string(),
                 reason: e.to_string(),
@@ -47,14 +48,12 @@ impl Vcs for GitVcs {
                     reason: e.to_string(),
                 })
             })
-            .collect::<Result<Vec<_>, AppError>>()?
-            .into_iter()
-            .filter(|change| {
-                matches!(change,
-                    gix::status::Item::IndexWorktree(item) if
-                    item.summary().map_or(true, |summary|
-                        summary != gix::status::index_worktree::iter::Summary::Removed)
-                )
+            .map(Result::unwrap)
+            .filter(|change| match change {
+                gix::status::Item::IndexWorktree(item) => item
+                    .summary()
+                    .map_or(true, |summary| summary != Summary::Removed),
+                gix::status::Item::TreeIndex(_) => true,
             })
             .collect::<Vec<gix::status::Item>>();
 

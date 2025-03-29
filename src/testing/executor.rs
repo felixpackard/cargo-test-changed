@@ -92,7 +92,7 @@ impl<'a> TestExecutor<'a> {
                             std::io::stdout().write_all(&[byte]).map_err(|e| {
                                 AppError::CommandFailed {
                                     command: format!("{:?}", cmd),
-                                    reason: format!("failed to write to stdout: {}", e),
+                                    reason: format!("Failed to write to stdout: {}", e),
                                 }
                             })?;
                             std::io::stdout().flush().unwrap();
@@ -102,7 +102,7 @@ impl<'a> TestExecutor<'a> {
                             if e.kind() != std::io::ErrorKind::BrokenPipe {
                                 return Err(AppError::CommandFailed {
                                     command: format!("{:?}", cmd),
-                                    reason: format!("failed to read output: {}", e),
+                                    reason: format!("Failed to read output: {}", e),
                                 });
                             }
                             break;
@@ -119,7 +119,7 @@ impl<'a> TestExecutor<'a> {
                             if e.kind() != std::io::ErrorKind::BrokenPipe {
                                 return Err(AppError::CommandFailed {
                                     command: format!("{:?}", cmd),
-                                    reason: format!("failed to read output: {}", e),
+                                    reason: format!("Failed to read output: {}", e),
                                 });
                             }
                             break;
