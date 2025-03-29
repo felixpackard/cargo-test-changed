@@ -8,6 +8,7 @@ A Cargo subcommand to run tests for changed crates and their dependents.
 - Identify affected crates based on changed files
 - Run tests for changed crates and their dependents
 - Configurable test runner
+- JSON output mode for machine consumption
 
 ## Installation
 
@@ -28,6 +29,7 @@ Options:
 - `-d`, `--dry-run`: Skip running tests, only print the crates that would be tested
 - `-v`, `--verbose`: Display full output while running tests
 - `-n`, `--no-fail-fast`: Run tests for all crates regardless of failure
+- `-j`, `--json`: Output in JSON format for machine consumption
 - `-- <TEST_RUNNER_ARGS>...`: Additional arguments to pass to the test runner
 
 Examples:

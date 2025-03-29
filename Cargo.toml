@@ -22,6 +22,7 @@ colored = "3.0.0"
 gix = { version = "0.70", features = ["status"] }
 indexmap = "2.8.0"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.140"
 
 [[bin]]
 name = "cargo-test-changed"

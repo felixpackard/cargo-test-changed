@@ -1,7 +1,7 @@
 use colored::Colorize;
 use std::fmt;
 
-use crate::{format, TestFailure};
+use crate::reporting::Reporter;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -9,9 +9,7 @@ pub enum AppError {
         runner_name: String,
         installation_tip: String,
     },
-    TestsFailed {
-        failures: Vec<TestFailure>,
-    },
+    TestsFailed,
     GitDiscoveryFailed {
         reason: String,
     },
@@ -29,7 +27,6 @@ pub enum AppError {
     Other(anyhow::Error),
 }
 
-// Implement Display for uncolored error messages (for logging, etc.)
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -58,8 +55,8 @@ impl fmt::Display for AppError {
     }
 }
 
-// Map error types to exit codes and provide colorized output
 impl AppError {
+    /// Map error types to exit codes
     pub fn exit_code(&self) -> i32 {
         match self {
             AppError::TestRunnerNotInstalled { .. } => 10,
@@ -72,66 +69,52 @@ impl AppError {
         }
     }
 
-    // Create a colored version of the error message
-    fn colorized_message(&self) -> String {
+    /// Handle printing the error and any additional context
+    pub fn report<R: Reporter>(&self, reporter: &mut R) {
         match self {
-            AppError::TestRunnerNotInstalled { runner_name, .. } => {
-                format!(
-                    "test runner '{}' is not installed",
-                    runner_name.bold().yellow()
-                )
+            AppError::TestRunnerNotInstalled {
+                runner_name,
+                installation_tip,
+            } => {
+                reporter.error(&format!("test runner '{}' is not installed", runner_name));
+                reporter.tip(installation_tip);
             }
-
-            AppError::TestsFailed { .. } => "test failed".to_string(),
-
+            AppError::TestsFailed { .. } => {
+                reporter.error("test failed");
+            }
             AppError::GitDiscoveryFailed { reason } => {
-                format!("failed to discover git repository: {}", reason.bold())
+                reporter.error(&format!(
+                    "failed to discover git repository: {}",
+                    reason.bold()
+                ));
             }
-
             AppError::MetadataFailed { reason } => {
-                format!("failed to retrieve cargo metadata: {}", reason.bold())
+                reporter.error(&format!(
+                    "failed to retrieve cargo metadata: {}",
+                    reason.bold()
+                ));
             }
-
             AppError::GitOperationFailed { operation, reason } => {
-                format!(
+                reporter.error(&format!(
                     "git operation '{}' failed: {}",
                     operation.bold().yellow(),
                     reason.bold()
-                )
+                ));
             }
-
             AppError::CommandFailed { command, reason } => {
-                format!(
+                reporter.error(&format!(
                     "command '{}' failed: {}",
                     command.bold().yellow(),
                     reason.bold()
-                )
+                ));
             }
-
             AppError::Other(err) => {
-                format!("{}", err)
+                reporter.error(&format!("{}", err));
             }
-        }
-    }
-
-    // Handle printing the error and any additional context
-    pub fn report(&self) {
-        format::error!(self.colorized_message());
-
-        // Add additional context for specific error types
-        match self {
-            AppError::TestRunnerNotInstalled {
-                installation_tip, ..
-            } => {
-                println!();
-                format::tip!(installation_tip);
-            }
-            _ => {}
         }
     }
 }
 
-// Implement conversion from anyhow::Error to AppError
 impl From<anyhow::Error> for AppError {
     fn from(err: anyhow::Error) -> Self {
         AppError::Other(err)
