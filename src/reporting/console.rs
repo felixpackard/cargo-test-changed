@@ -34,11 +34,12 @@ impl<W: Write> Reporter for ConsoleReporter<W> {
     fn test_start(&mut self, crate_name: &str, test_number: usize, total_tests: usize) {
         write!(
             self.writer,
-            "{}({}/{}) test crate {}",
+            "{}{:width$}/{} test crate {}",
             if self.verbose { "📦 " } else { "" },
             test_number,
             total_tests,
-            crate_name
+            crate_name,
+            width = total_tests.to_string().len()
         )
         .unwrap();
 
