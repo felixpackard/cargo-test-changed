@@ -101,7 +101,7 @@ impl<W: Write> Reporter for JsonReporter<W> {
                         "run_type": "discovered",
                         "modified_count": modified_count,
                         "dependent_count": dependent_count,
-                        "skip_dependents": test_plan.skip_dependents,
+                        "with_dependents": test_plan.with_dependents,
                     }),
                 );
             }

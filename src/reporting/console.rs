@@ -100,20 +100,23 @@ impl<W: Write> Reporter for ConsoleReporter<W> {
                 let modified_word = pluralize(modified_count, "crate", "crates");
                 let dependent_word = pluralize(dependent_count, "crate", "crates");
 
-                writeln!(
+                write!(
                     self.writer,
-                    "discovered {} changed {}; {}{} dependent {}\n",
-                    modified_count,
-                    modified_word,
-                    if test_plan.skip_dependents {
-                        "skipping "
-                    } else {
-                        ""
-                    },
-                    dependent_count,
-                    dependent_word
+                    "discovered {} changed {}",
+                    modified_count, modified_word
                 )
                 .unwrap();
+
+                if test_plan.with_dependents {
+                    write!(
+                        self.writer,
+                        "; {} dependent {}",
+                        dependent_count, dependent_word
+                    )
+                    .unwrap();
+                }
+
+                writeln!(self.writer, "\n").unwrap();
             }
         }
     }

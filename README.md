@@ -9,6 +9,7 @@ A Cargo subcommand to run tests for changed crates and their dependents.
 - Run tests for changed crates and their dependents
 - Configurable test runner
 - JSON output mode for machine consumption
+- Re-run tests for failed crates
 
 ## Installation
 
@@ -25,11 +26,12 @@ cargo test-changed
 
 Options:
 - `-t`, `--test-runner`: Specify a custom test runner
-- `-s`, `--skip-dependents`: Skip dependent crates, only test crates with changes
+- `-w`, `--with-dependents`: Include tests for crates dependent on the changed crates in the test run
 - `-d`, `--dry-run`: Skip running tests, only print the crates that would be tested
 - `-v`, `--verbose`: Display full output while running tests
 - `-n`, `--no-fail-fast`: Run tests for all crates regardless of failure
 - `-j`, `--json`: Output in JSON format for machine consumption
+- `-c`, `--crates`: Specify a set of crates to run tests for, typically for re-running failed tests
 - `-- <TEST_RUNNER_ARGS>...`: Additional arguments to pass to the test runner
 
 Examples:
@@ -51,4 +53,4 @@ cargo test-changed -- --release
 
 - Currently only supports Git as the version control system
 - Currently only supports `cargo` and `nextest` test runners
-- Does not support running tests in parallel
+- Does not support testing crates in parallel

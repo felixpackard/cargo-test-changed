@@ -39,9 +39,9 @@ struct TestChangedArgs {
     #[arg(long, short, default_value = "cargo")]
     test_runner: TestRunnerType,
 
-    /// Skip dependent crates, only test crates with changes
+    /// Include tests for crates dependent on the changed crates in the test run
     #[arg(long, short)]
-    skip_dependents: bool,
+    with_dependents: bool,
 
     /// Skip running tests, only print the crates that would be tested
     #[arg(long, short)]
@@ -138,7 +138,7 @@ fn run() -> Result<(), AppError> {
     let test_plan = TestPlan {
         workspace_root,
         crates,
-        skip_dependents: args.skip_dependents,
+        with_dependents: args.with_dependents,
         fail_fast: !args.no_fail_fast,
         verbose: args.verbose,
         test_runner_args: args.test_runner_args,
