@@ -1,12 +1,12 @@
 [package]
-description = "A cargo subcommand to run tests for changed crates and their dependents."
+description = "A Cargo subcommand to run tests for changed crates and their dependents. "
 name = "cargo-test-changed"
 version = "0.1.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "Apache-2.0 OR MIT"
 authors = ["Felix Packard <fjpackard@gmail.com>"]
 repository = "https://github.com/felixpackard/cargo-test-changed"
-keywords = ["cargo", "subcommand", "test", "git"]
+keywords = ["cargo", "subcommand", "testing", "git"]
 categories = [
     "command-line-utilities",
     "development-tools::cargo-plugins",
