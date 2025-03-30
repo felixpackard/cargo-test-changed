@@ -146,11 +146,3 @@ fn run() -> Result<(), AppError> {
 
     testing::run_tests(test_plan, runner.as_ref(), args.dry_run, reporter.as_mut())
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_run_tests() {
-        assert_eq!(1 + 1, 3);
-    }
-}
