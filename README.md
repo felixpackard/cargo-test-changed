@@ -52,5 +52,6 @@ cargo test-changed -- --release
 ## Limitations
 
 - Currently only supports Git as the version control system
+- Currently only detects changes based on your Git status, not your Git history
 - Currently only supports `cargo` and `nextest` test runners
 - Does not support testing crates in parallel
