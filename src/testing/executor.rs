@@ -64,7 +64,7 @@ impl<'a> TestExecutor<'a> {
         self.reporter
             .test_start(crate_name, test_number, total_tests);
 
-        std::io::stdout().flush().unwrap();
+        let _ = std::io::stdout().flush();
 
         let crate_start = Instant::now();
         let mut cmd = self.runner.command(crate_name);
@@ -102,7 +102,7 @@ impl<'a> TestExecutor<'a> {
                                     reason: format!("Failed to write to stdout: {}", e),
                                 }
                             })?;
-                            std::io::stdout().flush().unwrap();
+                            let _ = std::io::stdout().flush();
                             output_capture.push(byte);
                         }
                         Err(e) => {

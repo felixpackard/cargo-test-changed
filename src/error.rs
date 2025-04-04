@@ -1,66 +1,31 @@
 use colored::Colorize;
-use std::fmt;
+use thiserror::Error;
 
 use crate::reporting::Reporter;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum AppError {
+    #[error("test runner '{runner_name}' is not installed")]
     TestRunnerNotInstalled {
         runner_name: String,
         installation_tip: String,
     },
-    TestsFailed {
-        failed_crates: Vec<String>,
-    },
-    GitDiscoveryFailed {
-        reason: String,
-    },
-    MetadataFailed {
-        reason: String,
-    },
-    GitOperationFailed {
-        operation: String,
-        reason: String,
-    },
-    CommandFailed {
-        command: String,
-        reason: String,
-    },
-    UnknownCrate {
-        crate_name: String,
-    },
+    #[error("test failed")]
+    TestsFailed { failed_crates: Vec<String> },
+    #[error("failed to discover git repository: {reason}")]
+    GitDiscoveryFailed { reason: String },
+    #[error("failed to retrieve cargo metadata: {reason}")]
+    MetadataFailed { reason: String },
+    #[error("git operation '{operation}' failed: {reason}")]
+    GitOperationFailed { operation: String, reason: String },
+    #[error("command '{command}' failed: {reason}")]
+    CommandFailed { command: String, reason: String },
+    #[error("unknown crate '{crate_name}'")]
+    UnknownCrate { crate_name: String },
+    #[error("invalid arguments: {reason}")]
+    InvalidArguments { reason: String },
+    #[error("{0}")]
     Other(anyhow::Error),
-}
-
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AppError::TestRunnerNotInstalled { runner_name, .. } => {
-                write!(f, "test runner '{}' is not installed", runner_name)
-            }
-            AppError::TestsFailed { .. } => {
-                write!(f, "test failed")
-            }
-            AppError::GitDiscoveryFailed { reason } => {
-                write!(f, "failed to discover git repository: {}", reason)
-            }
-            AppError::MetadataFailed { reason } => {
-                write!(f, "failed to retrieve cargo metadata: {}", reason)
-            }
-            AppError::GitOperationFailed { operation, reason } => {
-                write!(f, "git operation '{}' failed: {}", operation, reason)
-            }
-            AppError::CommandFailed { command, reason } => {
-                write!(f, "command '{}' failed: {}", command, reason)
-            }
-            AppError::UnknownCrate { crate_name } => {
-                write!(f, "unknown crate '{}'", crate_name)
-            }
-            AppError::Other(err) => {
-                write!(f, "{}", err)
-            }
-        }
-    }
 }
 
 impl AppError {
@@ -74,6 +39,7 @@ impl AppError {
             AppError::GitOperationFailed { .. } => 50,
             AppError::CommandFailed { .. } => 60,
             AppError::UnknownCrate { .. } => 70,
+            AppError::InvalidArguments { .. } => 80,
             AppError::Other(_) => 1,
         }
     }
@@ -123,6 +89,9 @@ impl AppError {
             }
             AppError::UnknownCrate { crate_name } => {
                 reporter.error(&format!("unknown crate '{}'", crate_name.bold().yellow()));
+            }
+            AppError::InvalidArguments { reason } => {
+                reporter.error(&format!("invalid arguments: {}", reason.bold().yellow()));
             }
             AppError::Other(err) => {
                 reporter.error(&format!("{}", err));

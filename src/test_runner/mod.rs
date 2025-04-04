@@ -21,8 +21,9 @@ pub trait TestRunner {
     fn name(&self) -> &'static str;
 }
 
-#[derive(Debug, Clone, ValueEnum)]
+#[derive(ValueEnum, Debug, Clone, Default)]
 pub enum TestRunnerType {
+    #[default]
     Cargo,
     Nextest,
 }

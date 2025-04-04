@@ -1,4 +1,5 @@
 use indexmap::IndexSet;
+use serde::Serialize;
 
 #[derive(Debug)]
 pub struct TestPlan {
@@ -10,18 +11,19 @@ pub struct TestPlan {
     pub test_runner_args: Vec<String>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DiscoveryType {
     Modified,
     Dependent,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 pub struct ManualTestCrate {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 pub struct DiscoveredTestCrate {
     pub name: String,
     pub discovery_type: DiscoveryType,

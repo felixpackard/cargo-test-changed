@@ -1,4 +1,9 @@
-use crate::testing::{plan::TestPlan, result::TestResult};
+use std::path::Path;
+
+use crate::{
+    testing::{plan::TestPlan, result::TestResult},
+    vcs::ChangedFile,
+};
 
 pub mod console;
 pub mod json;
@@ -13,6 +18,9 @@ pub trait Reporter {
 
     /// Report an error message
     fn error(&mut self, message: &str);
+
+    /// Report the list of changed files
+    fn changed_files(&mut self, changed_files: &[ChangedFile], workspace_root: &Path);
 
     /// Report the test start
     fn test_start(&mut self, crate_name: &str, test_number: usize, total_tests: usize);
