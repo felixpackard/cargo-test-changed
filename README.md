@@ -17,7 +17,7 @@ A Cargo subcommand to run tests for changed crates and their dependents.
 ## Installation
 
 ```bash
-cargo install --path .
+cargo install --locked cargo-test-changed
 ```
 
 ## Usage
@@ -111,9 +111,9 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 Contributions are welcome! Please feel free to create an Issue or submit a Pull Request.
 
 [//]: # (badges)
-[crate-image]: https://img.shields.io/crates/v/cargo-test-changed.svg
+[crate-image]: https://img.shields.io/crates/v/cargo-test-changed
 [crate-link]: https://crates.io/crates/cargo-test-changed
-[license-image]: https://img.shields.io/crates/l/cargo-test-changed.svg
+[license-image]: https://img.shields.io/crates/l/cargo-test-changed
 [license-link]: LICENSE
 
 [//]: # (general links)

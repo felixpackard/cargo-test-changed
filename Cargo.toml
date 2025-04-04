@@ -3,6 +3,7 @@ description = "A Cargo subcommand to run tests for changed crates and their depe
 name = "cargo-test-changed"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 license = "Apache-2.0 OR MIT"
 authors = ["Felix Packard <fjpackard@gmail.com>"]
 repository = "https://github.com/felixpackard/cargo-test-changed"

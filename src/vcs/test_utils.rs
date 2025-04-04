@@ -15,17 +15,17 @@ impl TestRepo {
 
         // Initialize git repo
         Command::new("git")
-            .args(&["init"])
+            .args(["init"])
             .current_dir(&repo_path)
             .output()?;
 
         // Configure git user
         Command::new("git")
-            .args(&["config", "user.name", "Test User"])
+            .args(["config", "user.name", "Test User"])
             .current_dir(&repo_path)
             .output()?;
         Command::new("git")
-            .args(&["config", "user.email", "test@example.com"])
+            .args(["config", "user.email", "test@example.com"])
             .current_dir(&repo_path)
             .output()?;
 
@@ -59,7 +59,7 @@ impl TestRepo {
 
     pub fn stage_file(&self, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
         Command::new("git")
-            .args(&["add", filename])
+            .args(["add", filename])
             .current_dir(&self.repo_path)
             .output()?;
         Ok(())
@@ -67,7 +67,7 @@ impl TestRepo {
 
     pub fn stage_all(&self) -> Result<(), Box<dyn std::error::Error>> {
         Command::new("git")
-            .args(&["add", "--all"])
+            .args(["add", "--all"])
             .current_dir(&self.repo_path)
             .output()?;
         Ok(())
@@ -75,12 +75,12 @@ impl TestRepo {
 
     pub fn commit(&self, message: &str) -> Result<String, Box<dyn std::error::Error>> {
         Command::new("git")
-            .args(&["commit", "-m", message])
+            .args(["commit", "-m", message])
             .current_dir(&self.repo_path)
             .output()?;
 
         let output = Command::new("git")
-            .args(&["rev-parse", "HEAD"])
+            .args(["rev-parse", "HEAD"])
             .current_dir(&self.repo_path)
             .output()?;
 

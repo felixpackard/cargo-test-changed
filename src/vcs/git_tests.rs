@@ -172,7 +172,7 @@ mod uncommitted_changes_tests {
 
         // Rename the file using git mv
         Command::new("git")
-            .args(&["mv", "original.txt", "renamed.txt"])
+            .args(["mv", "original.txt", "renamed.txt"])
             .current_dir(&test_repo.repo_path)
             .output()?;
 
@@ -336,7 +336,7 @@ mod uncommitted_changes_tests {
         // Change file permissions to make it executable
         let file_path = test_repo.repo_path.join("script.sh");
         Command::new("chmod")
-            .args(&["+x", file_path.to_str().unwrap()])
+            .args(["+x", file_path.to_str().unwrap()])
             .output()?;
 
         // Get uncommitted changes
@@ -561,7 +561,7 @@ mod commit_diff_tests {
 
         // Rename file and commit
         Command::new("git")
-            .args(&["mv", "original.txt", "renamed.txt"])
+            .args(["mv", "original.txt", "renamed.txt"])
             .current_dir(&test_repo.repo_path)
             .output()?;
         test_repo.stage_all()?;
@@ -752,7 +752,7 @@ mod commit_diff_tests {
         // Change file permissions to make it executable
         let file_path = test_repo.repo_path.join("script.sh");
         Command::new("chmod")
-            .args(&["+x", file_path.to_str().unwrap()])
+            .args(["+x", file_path.to_str().unwrap()])
             .output()?;
         test_repo.stage_all()?;
         let commit2 = test_repo.commit("Make script executable")?;
@@ -808,7 +808,7 @@ mod commit_diff_tests {
 
         // Create and checkout a new branch
         Command::new("git")
-            .args(&["checkout", "-b", "feature-branch"])
+            .args(["checkout", "-b", "feature-branch"])
             .current_dir(&test_repo.repo_path)
             .output()?;
 
@@ -843,7 +843,7 @@ mod commit_diff_tests {
 
         // Create and checkout a feature branch
         Command::new("git")
-            .args(&["checkout", "-b", "feature-branch"])
+            .args(["checkout", "-b", "feature-branch"])
             .current_dir(&test_repo.repo_path)
             .output()?;
 
@@ -854,7 +854,7 @@ mod commit_diff_tests {
 
         // Go back to main and add a different file
         Command::new("git")
-            .args(&["checkout", "master"])
+            .args(["checkout", "master"])
             .current_dir(&test_repo.repo_path)
             .output()?;
         test_repo.create_file("main2.txt", "more main content")?;
@@ -863,13 +863,13 @@ mod commit_diff_tests {
 
         // Merge feature branch into main
         Command::new("git")
-            .args(&["merge", "feature-branch", "-m", "Merge feature branch"])
+            .args(["merge", "feature-branch", "-m", "Merge feature branch"])
             .current_dir(&test_repo.repo_path)
             .output()?;
 
         // Get commit hash of the merge commit (HEAD)
         let merge_commit = Command::new("git")
-            .args(&["rev-parse", "HEAD"])
+            .args(["rev-parse", "HEAD"])
             .current_dir(&test_repo.repo_path)
             .output()?;
         let merge_commit_hash = String::from_utf8(merge_commit.stdout)?.trim().to_string();
@@ -940,7 +940,7 @@ mod commit_diff_tests {
 
         // First branch
         Command::new("git")
-            .args(&["checkout", "-b", "branch1"])
+            .args(["checkout", "-b", "branch1"])
             .current_dir(&test_repo.repo_path)
             .output()?;
         test_repo.create_file("branch1.txt", "branch1 content")?;
@@ -949,11 +949,11 @@ mod commit_diff_tests {
 
         // Go back to initial commit and create second branch
         Command::new("git")
-            .args(&["checkout", &initial_commit])
+            .args(["checkout", &initial_commit])
             .current_dir(&test_repo.repo_path)
             .output()?;
         Command::new("git")
-            .args(&["checkout", "-b", "branch2"])
+            .args(["checkout", "-b", "branch2"])
             .current_dir(&test_repo.repo_path)
             .output()?;
         test_repo.create_file("branch2.txt", "branch2 content")?;
@@ -1001,7 +1001,7 @@ mod commit_diff_tests {
 
         // Skip if git version is too old for submodule support
         // (This is a simplified version, in practice you might want to check the actual git version)
-        let git_version = Command::new("git").args(&["--version"]).output()?;
+        let git_version = Command::new("git").args(["--version"]).output()?;
         if !String::from_utf8_lossy(&git_version.stdout).contains("git version") {
             return Ok(());
         }
