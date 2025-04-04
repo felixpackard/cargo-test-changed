@@ -1,5 +1,8 @@
 # cargo-test-changed
 
+[![Crates.io][crate-image]][crate-link]
+[![License][license-image]][license-link]
+
 A Cargo subcommand to run tests for changed crates and their dependents.
 
 ## Features
@@ -92,6 +95,28 @@ For development, make sure to use the `dev` profile so you get full debugging su
 cargo install --path . --profile dev
 ```
 
+## License
+
+Licensed under either of:
+
+ * Apache License, Version 2.0 ([LICENSE-APACHE] or https://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT] or https://opensource.org/licenses/MIT)
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you shall be dual licensed as above, without any additional terms or conditions.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to create an Issue or submit a Pull Request.
+
+[//]: # (badges)
+[crate-image]: https://img.shields.io/crates/v/cargo-test-changed.svg
+[crate-link]: https://crates.io/crates/cargo-test-changed
+[license-image]: https://img.shields.io/crates/l/cargo-test-changed.svg
+[license-link]: LICENSE
+
+[//]: # (general links)
+
+[LICENSE-APACHE]: https://github.com/felixpackard/cargo-test-changed/blob/master/LICENSE-APACHE
+[LICENSE-MIT]: https://github.com/felixpackard/cargo-test-changed/blob/master/LICENSE-MIT

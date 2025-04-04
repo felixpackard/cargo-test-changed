@@ -84,11 +84,11 @@ pub fn find_changed_crates<'a>(
     let mut changed_crates = IndexSet::new();
 
     for change in changed_files {
-        if let Some(crate_info) = find_crate_for_file(&change.current_path, &crates) {
+        if let Some(crate_info) = find_crate_for_file(&change.current_path, crates) {
             changed_crates.insert(&crate_info.name);
         }
         if let Some(old_path) = &change.old_path {
-            if let Some(crate_info) = find_crate_for_file(old_path, &crates) {
+            if let Some(crate_info) = find_crate_for_file(old_path, crates) {
                 changed_crates.insert(&crate_info.name);
             }
         }
