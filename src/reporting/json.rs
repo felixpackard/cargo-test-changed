@@ -138,7 +138,7 @@ impl<W: Write> Reporter for JsonReporter<W> {
         }
     }
 
-    fn test_failures(&mut self, failures: &Vec<TestResult>) {
+    fn test_failures(&mut self, failures: &[TestResult]) {
         for failure in failures.iter() {
             self.test_failure_details(&failure.crate_name, &failure.output);
         }

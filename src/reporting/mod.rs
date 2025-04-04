@@ -35,7 +35,7 @@ pub trait Reporter {
     fn plan_summary(&mut self, test_plan: &TestPlan);
 
     /// Report all test failures
-    fn test_failures(&mut self, failures: &Vec<TestResult>);
+    fn test_failures(&mut self, failures: &[TestResult]);
 
     /// Report a test failure details
     fn test_failure_details(&mut self, crate_name: &str, output: &str);

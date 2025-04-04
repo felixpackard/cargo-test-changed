@@ -194,7 +194,7 @@ impl<W: Write> Reporter for ConsoleReporter<W> {
         }
     }
 
-    fn test_failures(&mut self, failures: &Vec<TestResult>) {
+    fn test_failures(&mut self, failures: &[TestResult]) {
         self.try_writeln(format_args!("\nfailed crate output:\n"));
 
         for failure in failures.iter() {

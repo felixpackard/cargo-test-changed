@@ -93,7 +93,7 @@ impl<'a> TestExecutor<'a> {
                 .chain(std::io::BufReader::new(stderr).bytes().map(|r| (r, true)));
 
             if self.test_plan.verbose {
-                while let Some((byte_result, _is_stderr)) = merged_output.next() {
+                for (byte_result, _is_stderr) in merged_output.by_ref() {
                     match byte_result {
                         Ok(byte) => {
                             std::io::stdout().write_all(&[byte]).map_err(|e| {
@@ -117,7 +117,7 @@ impl<'a> TestExecutor<'a> {
                     }
                 }
             } else {
-                while let Some((byte_result, _is_stderr)) = merged_output.next() {
+                for (byte_result, _is_stderr) in merged_output {
                     match byte_result {
                         Ok(byte) => {
                             output_capture.push(byte);

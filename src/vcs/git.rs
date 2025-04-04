@@ -325,7 +325,7 @@ impl TryFrom<&gix::status::index_worktree::Item> for GitPathInfo {
     }
 }
 
-impl<'l, 'r> TryFrom<&gix::diff::index::ChangeRef<'l, 'r>> for GitPathInfo {
+impl TryFrom<&gix::diff::index::ChangeRef<'_, '_>> for GitPathInfo {
     type Error = AppError;
 
     fn try_from(change_ref: &gix::diff::index::ChangeRef) -> Result<Self, Self::Error> {
@@ -391,7 +391,7 @@ impl From<&gix::status::index_worktree::Item> for ChangeType {
     }
 }
 
-impl<'l, 'r> From<&gix::diff::index::ChangeRef<'l, 'r>> for ChangeType {
+impl From<&gix::diff::index::ChangeRef<'_, '_>> for ChangeType {
     fn from(change_ref: &gix::diff::index::ChangeRef) -> Self {
         match change_ref {
             gix::diff::index::ChangeRef::Addition { .. } => ChangeType::Added,
@@ -418,16 +418,16 @@ impl FileType {
             },
             gix::status::Item::TreeIndex(change_ref) => match change_ref {
                 gix::diff::index::ChangeRef::Addition { entry_mode, .. } => {
-                    Some(entry_mode.clone().into())
+                    Some((*entry_mode).into())
                 }
                 gix::diff::index::ChangeRef::Deletion { entry_mode, .. } => {
-                    Some(entry_mode.clone().into())
+                    Some((*entry_mode).into())
                 }
                 gix::diff::index::ChangeRef::Modification { entry_mode, .. } => {
-                    Some(entry_mode.clone().into())
+                    Some((*entry_mode).into())
                 }
                 gix::diff::index::ChangeRef::Rewrite { entry_mode, .. } => {
-                    Some(entry_mode.clone().into())
+                    Some((*entry_mode).into())
                 }
             },
         }
