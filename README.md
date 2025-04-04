@@ -17,7 +17,7 @@ A Cargo subcommand to run tests for changed crates and their dependents.
 ## Installation
 
 ```bash
-cargo install --path .
+cargo install --locked cargo-test-changed
 ```
 
 ## Usage
