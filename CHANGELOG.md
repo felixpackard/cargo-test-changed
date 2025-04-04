@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
+- *(deps)* update codecov/codecov-action action to v5
 - Merge branch 'master' into renovate/gix-0.x
 - Replace deprecated `work_dir` function with functionally identical `workdir` function
 - Add renovate.json
