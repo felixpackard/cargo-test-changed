@@ -83,3 +83,15 @@ cargo test-changed --verbose
 - Currently only supports Git as the version control system
 - Currently only supports `cargo` and `nextest` test runners
 - Does not support testing crates in parallel
+
+## Development
+
+For development, make sure to use the `dev` profile so you get full debugging support:
+
+```bash
+cargo install --path . --profile dev
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to create an Issue or submit a Pull Request.
