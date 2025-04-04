@@ -26,7 +26,7 @@ impl Vcs for GitVcs {
     fn get_workspace_root(&self, path: &Path) -> Result<PathBuf, AppError> {
         let repo = discover_repo(path)?;
 
-        repo.work_dir()
+        repo.workdir()
             .ok_or_else(|| AppError::GitDiscoveryFailed {
                 reason: "Failed to get repository root".to_string(),
             })
