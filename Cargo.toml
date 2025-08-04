@@ -18,7 +18,7 @@ categories = [
 anyhow = "1.0"
 cargo_metadata = { version = "0.19", features = ["builder"] }
 clap = { version = "4.5.34", features = ["derive"] }
-clap-cargo = "0.16.0"
+clap-cargo = "0.15.2"
 colored = "3.0.0"
 gix = { version = "0.73", features = ["status"] }
 indexmap = { version = "2.8.0", features = ["serde"] }
