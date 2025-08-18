@@ -16,7 +16,7 @@ categories = [
 
 [dependencies]
 anyhow = "1.0"
-cargo_metadata = { version = "0.19", features = ["builder"] }
+cargo_metadata = { version = "0.22", features = ["builder"] }
 clap = { version = "4.5.34", features = ["derive"] }
 clap-cargo = "0.15.2"
 colored = "3.0.0"
